@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Calendar, GraduationCap, LogOut, BookOpen, Megaphone, Users, ClipboardList, FileText, ChevronLeft, ChevronRight, Menu } from 'lucide-react'
+import { LayoutDashboard, Calendar, GraduationCap, LogOut, BookOpen, Megaphone, Users, ClipboardList, FileText, ChevronLeft, ChevronRight, Menu, User } from 'lucide-react'
 
 interface Profile {
   name: string
@@ -84,6 +84,11 @@ export default function Sidebar({ profile, onLogout }: SidebarProps) {
       href: '/dosen/announcements',
       icon: Megaphone,
     },
+    {
+      name: 'Profil Saya',
+      href: '/dosen/profile',
+      icon: User,
+    },
   ]
 
   return (
@@ -107,7 +112,7 @@ export default function Sidebar({ profile, onLogout }: SidebarProps) {
       )}
 
       <aside
-        className={`bg-white border-r border-neutral-200 flex flex-col h-screen shrink-0 transition-all duration-300 ease-in-out relative z-45
+        className={`bg-white border-r border-neutral-200 flex flex-col h-screen shrink-0 transition-all duration-300 ease-in-out relative z-45 print:hidden
           ${isCollapsed ? 'w-16' : 'w-64'}
           md:sticky md:top-0
           max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:w-64 max-md:shadow-xl

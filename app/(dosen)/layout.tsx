@@ -47,12 +47,12 @@ export default async function DosenLayout({
   }
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] flex text-[#171717]">
+    <div className="min-h-screen bg-[#FAFAFA] flex text-[#171717] print:block print:bg-white print:text-black print:static print:w-full print:p-0">
       {/* Sidebar navigation */}
       <Sidebar profile={profile} onLogout={handleLogout} />
 
       {/* Main page content area */}
-      <div className="flex-1 flex flex-col min-h-screen overflow-y-auto min-w-0">
+      <div className="flex-1 flex flex-col min-h-screen overflow-y-auto min-w-0 print:block print:w-full print:static print:p-0 print:overflow-visible">
         {children}
       </div>
     </div>

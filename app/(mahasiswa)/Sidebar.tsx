@@ -88,7 +88,7 @@ export default function Sidebar({ profile, onLogout }: SidebarProps) {
       )}
 
       <aside
-        className={`bg-white border-r border-neutral-200 flex flex-col h-screen shrink-0 transition-all duration-300 ease-in-out relative z-45 font-sans
+        className={`bg-white border-r border-neutral-200 flex flex-col h-screen shrink-0 transition-all duration-300 ease-in-out relative z-45 font-sans print:hidden
           ${isCollapsed ? 'w-16' : 'w-64'}
           md:sticky md:top-0
           max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:w-64 max-md:shadow-xl

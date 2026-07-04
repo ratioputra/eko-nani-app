@@ -55,10 +55,10 @@ export default async function DosenGradesPage({
     redirect('/login')
   }
 
-  // 2. Fetch user profile role and name
+  // 2. Fetch user profile details
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('role, name')
+    .select('role, name, nidn, faculty, department')
     .eq('id', user.id)
     .single()
 
@@ -130,10 +130,16 @@ export default async function DosenGradesPage({
   const weightUts = selectedCourse?.weight_uts ?? 30
   const weightUas = selectedCourse?.weight_uas ?? 40
 
+  // 6. Fetch institution settings
+  const { data: instSettings } = await supabase
+    .from('institution_settings')
+    .select('*')
+    .single()
+
   return (
-    <div className="min-h-screen bg-[#FAFAFA] text-[#171717] flex flex-col font-sans antialiased">
+    <div className="min-h-screen bg-[#FAFAFA] text-[#171717] flex flex-col font-sans antialiased print:block print:w-full print:static print:bg-white print:text-black print:p-0">
       {/* Header */}
-      <header className="border-b border-neutral-200 bg-white px-6 py-4 flex items-center justify-between shadow-2xs">
+      <header className="border-b border-neutral-200 bg-white px-6 py-4 flex items-center justify-between shadow-2xs print:hidden">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600 border border-indigo-100">
             <GraduationCap className="w-5 h-5" />
@@ -151,9 +157,9 @@ export default async function DosenGradesPage({
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 max-w-5xl w-full mx-auto p-6 md:p-8 space-y-8">
+      <main className="flex-1 max-w-5xl w-full mx-auto p-6 md:p-8 space-y-8 print:block print:w-full print:max-w-none print:p-0 print:static print:m-0">
         {/* Page Title */}
-        <div className="flex flex-col gap-1.5 border-b border-neutral-200 pb-5">
+        <div className="flex flex-col gap-1.5 border-b border-neutral-200 pb-5 print:hidden">
           <div className="text-xs font-bold text-indigo-600 uppercase tracking-widest">Dosen Dashboard</div>
           <h1 className="text-3xl font-bold tracking-tight text-neutral-900">
             Grade Management
@@ -164,17 +170,19 @@ export default async function DosenGradesPage({
         </div>
 
         {/* Course Selector */}
-        <CourseSelect courses={courses} selectedCourseId={selectedCourseId} />
+        <div className="print:hidden">
+          <CourseSelect courses={courses} selectedCourseId={selectedCourseId} />
+        </div>
 
         {/* Selected Course Work Area */}
         {selectedCourseId ? (
           !selectedCourse ? (
-            <div className="p-4 bg-red-50 border border-red-100 text-red-700 rounded-md text-sm flex items-center gap-2">
+            <div className="p-4 bg-red-50 border border-red-100 text-red-700 rounded-md text-sm flex items-center gap-2 print:hidden">
               <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
               Mata kuliah tidak ditemukan atau Anda tidak berwenang mengampu mata kuliah ini.
             </div>
           ) : fetchError ? (
-            <div className="p-4 bg-red-50 border border-red-100 text-red-700 rounded-md text-sm flex items-center gap-2">
+            <div className="p-4 bg-red-50 border border-red-100 text-red-700 rounded-md text-sm flex items-center gap-2 print:hidden">
               <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
               Gagal memuat data nilai mahasiswa dari database. Silakan coba lagi.
             </div>
@@ -186,11 +194,22 @@ export default async function DosenGradesPage({
               initialWeightUts={weightUts}
               initialWeightUas={weightUas}
               initialGrades={grades}
+              courseCode={selectedCourse?.code || ''}
+              courseName={selectedCourse?.name || ''}
+              lecturerName={profile.name || ''}
+              lecturerNidn={profile.nidn || ''}
+              lecturerFaculty={profile.faculty || ''}
+              lecturerDepartment={profile.department || ''}
+              univName={instSettings?.univ_name || ''}
+              facultyDefault={instSettings?.faculty_default || ''}
+              departmentDefault={instSettings?.department_default || ''}
+              univAddress={instSettings?.address || ''}
+              univPhone={instSettings?.phone || ''}
             />
           )
         ) : (
           /* Empty State prompt */
-          <div className="bg-white border border-neutral-200 rounded-lg p-16 text-center flex flex-col items-center justify-center shadow-xs">
+          <div className="bg-white border border-neutral-200 rounded-lg p-16 text-center flex flex-col items-center justify-center shadow-xs print:hidden">
             <div className="w-12 h-12 rounded-full bg-neutral-50 border border-neutral-200 flex items-center justify-center text-neutral-400 mb-3">
               <BookOpen className="w-6 h-6" />
             </div>

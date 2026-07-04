@@ -1,8 +1,9 @@
 import React from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { Calendar, Video, MapPin, ExternalLink, GraduationCap, Clock, BookOpen } from 'lucide-react'
+import { Calendar, GraduationCap } from 'lucide-react'
 import ScheduleForm from './ScheduleForm'
+import ScheduleListTable from './ScheduleListTable'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,31 +23,6 @@ interface ScheduleRow {
   room_number: string | null
   meeting_link: string | null
   courses: CourseJoined | null
-}
-
-function formatTime(timeStr: string | null): string {
-  if (!timeStr) return ''
-  const parts = timeStr.split(':')
-  if (parts.length >= 2) {
-    return `${parts[0]}:${parts[1]}`
-  }
-  return timeStr
-}
-
-function formatClassDate(dateStr: string | null, dayName: string): string {
-  if (!dateStr) return dayName
-  try {
-    const date = new Date(dateStr)
-    return new Intl.DateTimeFormat('id-ID', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      timeZone: 'Asia/Jakarta'
-    }).format(date)
-  } catch {
-    return `${dayName}, ${dateStr}`
-  }
 }
 
 export default async function DosenSchedulesPage() {
@@ -131,11 +107,11 @@ export default async function DosenSchedulesPage() {
         
         {/* Page Title section */}
         <div className="flex flex-col gap-1.5 border-b border-neutral-200 pb-5">
-          <div className="text-xs font-bold text-indigo-600 uppercase tracking-widest">Dosen Dashboard</div>
+          <div className="text-xs font-bold text-indigo-600 uppercase tracking-widest font-sans">Dosen Dashboard</div>
           <h1 className="text-3xl font-bold tracking-tight text-neutral-900">
             Schedule Management
           </h1>
-          <p className="text-neutral-500 text-sm max-w-2xl">
+          <p className="text-neutral-500 text-sm max-w-2xl font-sans">
             Kelola jadwal kelas Anda. Anda dapat menambahkan jadwal kelas baru, menentukan ruangan kelas fisik (offline), atau memasukkan tautan virtual meeting (online).
           </p>
         </div>
@@ -144,108 +120,8 @@ export default async function DosenSchedulesPage() {
         <div className="grid grid-cols-1 gap-8">
           <ScheduleForm courses={courses} />
 
-          {/* Schedule Table Card */}
-          <div className="bg-white border border-neutral-200 shadow-sm rounded-lg overflow-hidden">
-            <div className="border-b border-neutral-100 bg-neutral-50/50 px-6 py-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-neutral-900 font-semibold text-lg flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-indigo-600" />
-                  Jadwal Mengajar Anda
-                </h2>
-                <p className="text-neutral-500 text-xs mt-0.5">
-                  Berikut adalah seluruh jadwal kuliah aktif yang Anda ampu semester ini.
-                </p>
-              </div>
-              <span className="text-xs font-semibold bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full border border-indigo-100">
-                {sortedSchedules.length} Jadwal
-              </span>
-            </div>
-
-            {sortedSchedules.length === 0 ? (
-              <div className="p-12 text-center flex flex-col items-center justify-center">
-                <div className="w-12 h-12 rounded-full bg-neutral-50 border border-neutral-200 flex items-center justify-center text-neutral-400 mb-3">
-                  <Calendar className="w-6 h-6" />
-                </div>
-                <h3 className="text-sm font-semibold text-neutral-800">Belum ada jadwal mengajar</h3>
-                <p className="text-xs text-neutral-500 mt-1 max-w-sm">
-                  Anda belum menambahkan jadwal mengajar untuk mata kuliah Anda. Silakan isi form di atas untuk membuat jadwal baru.
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-neutral-200 bg-neutral-50/50 text-[10px] font-bold text-neutral-500 uppercase tracking-wider">
-                      <th className="px-6 py-3">Mata Kuliah</th>
-                      <th className="px-6 py-3">Waktu</th>
-                      <th className="px-6 py-3">Metode</th>
-                      <th className="px-6 py-3">Ruangan / Link</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-100 text-sm">
-                    {sortedSchedules.map((schedule) => {
-                      const courseName = schedule.courses?.name || 'Mata Kuliah'
-                      const courseCode = schedule.courses?.code || '-'
-                      return (
-                        <tr key={schedule.id} className="hover:bg-neutral-50/50 transition-colors">
-                          <td className="px-6 py-4">
-                            <div className="flex flex-col">
-                              <span className="font-semibold text-neutral-900">{courseName}</span>
-                              <span className="text-xs text-neutral-500 font-mono font-medium mt-0.5">{courseCode}</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2 text-neutral-800">
-                              <Clock className="w-4 h-4 text-neutral-400" />
-                              <span className="font-medium">{formatClassDate(schedule.class_date, schedule.day)}</span>
-                              <span className="text-neutral-400">•</span>
-                              <span className="text-neutral-600">
-                                {formatTime(schedule.start_time)} - {formatTime(schedule.end_time)}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            {schedule.is_online ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
-                                <Video className="w-3 h-3" />
-                                Online
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-neutral-100 text-neutral-700 border border-neutral-200">
-                                <MapPin className="w-3 h-3" />
-                                Offline
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4">
-                            {schedule.is_online ? (
-                              schedule.meeting_link ? (
-                                <a
-                                  href={schedule.meeting_link}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 hover:underline font-medium"
-                                >
-                                  Gabung Kelas
-                                  <ExternalLink className="w-3 h-3" />
-                                </a>
-                              ) : (
-                                <span className="text-neutral-400 text-xs italic">Link tidak tersedia</span>
-                              )
-                            ) : (
-                              <span className="font-semibold text-neutral-800 flex items-center gap-1">
-                                {schedule.room_number || '-'}
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          {/* Schedule List Table Component */}
+          <ScheduleListTable initialSchedules={sortedSchedules} courses={courses} />
         </div>
       </main>
     </div>

@@ -19,6 +19,9 @@ import {
   ExternalLink,
   ChevronRight,
   ShieldCheck,
+  Pencil,
+  Trash2,
+  X,
 } from 'lucide-react'
 
 interface Course {
@@ -70,6 +73,19 @@ export default function AssignmentManager({ courses }: AssignmentManagerProps) {
   const [newTitle, setNewTitle] = useState('')
   const [newDescription, setNewDescription] = useState('')
   const [newDeadline, setNewDeadline] = useState('')
+
+  // Edit Assignment states
+  const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editDeadline, setEditDeadline] = useState('')
+  const [editLoading, setEditLoading] = useState(false)
+  const [editError, setEditError] = useState<string | null>(null)
+
+  // Delete Assignment states
+  const [deletingAssignment, setDeletingAssignment] = useState<Assignment | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   // Grading states
   const [inputScore, setInputScore] = useState<string>('')
@@ -202,6 +218,79 @@ export default function AssignmentManager({ courses }: AssignmentManagerProps) {
     }
   }
 
+  // Handle Edit Assignment Submit
+  const handleEditAssignment = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingAssignment) return
+
+    setEditError(null)
+    setEditLoading(true)
+
+    if (!editTitle.trim()) {
+      setEditError('Judul tugas wajib diisi.')
+      setEditLoading(false)
+      return
+    }
+
+    if (!editDeadline.trim()) {
+      setEditError('Tenggat waktu (deadline) wajib diisi.')
+      setEditLoading(false)
+      return
+    }
+
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('assignments')
+        .update({
+          title: editTitle.trim(),
+          description: editDescription.trim(),
+          deadline: editDeadline,
+        })
+        .eq('id', editingAssignment.id)
+
+      if (error) {
+        setEditError(error.message)
+      } else {
+        setSuccessMsg('Tugas berhasil diperbarui!')
+        setEditingAssignment(null)
+        await fetchAssignments(selectedCourseId)
+      }
+    } catch (err: any) {
+      setEditError(err.message || 'Gagal memperbarui tugas.')
+    } finally {
+      setEditLoading(false)
+    }
+  }
+
+  // Handle Delete Assignment
+  const handleDeleteAssignment = async () => {
+    if (!deletingAssignment) return
+
+    setDeleteError(null)
+    setDeleteLoading(true)
+
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('assignments')
+        .delete()
+        .eq('id', deletingAssignment.id)
+
+      if (error) {
+        setDeleteError(error.message)
+      } else {
+        setSuccessMsg('Tugas berhasil dihapus!')
+        setDeletingAssignment(null)
+        await fetchAssignments(selectedCourseId)
+      }
+    } catch (err: any) {
+      setDeleteError(err.message || 'Gagal menghapus tugas.')
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
+
   // 4. Enter Level 3 (Reviewing PDF Submission)
   const handleStartReview = (subRow: StudentSubmissionRow) => {
     setSelectedSubmission(subRow)
@@ -328,17 +417,56 @@ export default function AssignmentManager({ courses }: AssignmentManagerProps) {
                 {assignments.map((assign) => (
                   <Card
                     key={assign.id}
-                    className="bg-white border border-neutral-200 hover:border-neutral-300 hover:shadow-xs transition-all cursor-pointer group flex flex-col justify-between"
+                    className="bg-white border border-neutral-200 hover:border-neutral-300 hover:shadow-xs transition-all cursor-pointer group flex flex-col justify-between animate-in fade-in duration-200"
                     onClick={() => fetchSubmissions(assign)}
                   >
                     <CardHeader className="p-5 pb-3">
                       <div className="flex items-start justify-between gap-3">
-                        <CardTitle className="text-neutral-900 group-hover:text-indigo-600 font-bold text-base transition-colors line-clamp-1">
-                          {assign.title}
-                        </CardTitle>
-                        <span className="text-[10px] text-neutral-400 font-mono shrink-0">
-                          {new Date(assign.created_at).toLocaleDateString('id-ID')}
-                        </span>
+                        <div className="space-y-0.5 min-w-0">
+                          <CardTitle className="text-neutral-900 group-hover:text-indigo-600 font-bold text-base transition-colors line-clamp-1">
+                            {assign.title}
+                          </CardTitle>
+                          <span className="text-[10px] text-neutral-400 font-mono block">
+                            Dibuat: {new Date(assign.created_at).toLocaleDateString('id-ID')}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setEditingAssignment(assign)
+                              setEditTitle(assign.title)
+                              setEditDescription(assign.description || '')
+                              if (assign.deadline) {
+                                const d = new Date(assign.deadline)
+                                const localISO = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+                                setEditDeadline(localISO)
+                              } else {
+                                setEditDeadline('')
+                              }
+                              setEditError(null)
+                              setErrorMsg(null)
+                              setSuccessMsg(null)
+                            }}
+                            title="Edit Tugas"
+                            className="p-1 text-neutral-450 hover:text-indigo-600 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 rounded transition-all cursor-pointer"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setDeletingAssignment(assign)
+                              setDeleteError(null)
+                              setErrorMsg(null)
+                              setSuccessMsg(null)
+                            }}
+                            title="Hapus Tugas"
+                            className="p-1 text-neutral-450 hover:text-red-650 hover:bg-red-50 border border-transparent hover:border-red-100 rounded transition-all cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                       <CardDescription className="text-neutral-500 text-xs line-clamp-2 mt-1.5">
                         {assign.description || 'Tidak ada deskripsi.'}
@@ -385,7 +513,7 @@ export default function AssignmentManager({ courses }: AssignmentManagerProps) {
                       value={newTitle}
                       onChange={(e) => setNewTitle(e.target.value)}
                       placeholder="Masukkan judul tugas..."
-                      className="h-9 w-full rounded border border-neutral-300 px-3 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-neutral-900"
+                      className="h-9 w-full rounded border border-neutral-300 px-3 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-neutral-900 bg-white"
                     />
                   </div>
 
@@ -400,7 +528,7 @@ export default function AssignmentManager({ courses }: AssignmentManagerProps) {
                       value={newDescription}
                       onChange={(e) => setNewDescription(e.target.value)}
                       placeholder="Berikan instruksi detail tugas..."
-                      className="w-full rounded border border-neutral-300 p-2.5 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-neutral-900"
+                      className="w-full rounded border border-neutral-300 p-2.5 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-neutral-900 bg-white"
                     />
                   </div>
 
@@ -415,7 +543,7 @@ export default function AssignmentManager({ courses }: AssignmentManagerProps) {
                       required
                       value={newDeadline}
                       onChange={(e) => setNewDeadline(e.target.value)}
-                      className="h-9 w-full rounded border border-neutral-300 px-3 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-neutral-900"
+                      className="h-9 w-full rounded border border-neutral-300 px-3 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-neutral-900 bg-white"
                     />
                   </div>
 
@@ -425,19 +553,177 @@ export default function AssignmentManager({ courses }: AssignmentManagerProps) {
                       type="button"
                       variant="outline"
                       onClick={() => setShowCreateModal(false)}
-                      className="border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+                      className="border-neutral-200 text-neutral-600 hover:bg-neutral-50 cursor-pointer"
                     >
                       Batal
                     </Button>
                     <Button
                       type="submit"
                       disabled={actionLoading}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium"
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium cursor-pointer"
                     >
                       {actionLoading ? 'Menyimpan...' : 'Rilis Tugas'}
                     </Button>
                   </div>
                 </form>
+              </div>
+            </div>
+          )}
+
+          {/* EDIT ASSIGNMENT MODAL OVERLAY */}
+          {editingAssignment && (
+            <div className="fixed inset-0 bg-neutral-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+              <div className="bg-white border border-neutral-200 rounded-lg shadow-xl max-w-md w-full p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                  <h3 className="font-bold text-neutral-900 text-base">Edit Tugas</h3>
+                  <button
+                    onClick={() => setEditingAssignment(null)}
+                    className="text-neutral-400 hover:text-neutral-600 text-lg font-bold"
+                  >
+                    ×
+                  </button>
+                </div>
+                <form onSubmit={handleEditAssignment} className="space-y-4 text-sm">
+                  {editError && (
+                    <div className="p-3 bg-red-50 border border-red-100 text-red-700 rounded-md text-xs flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+                      {editError}
+                    </div>
+                  )}
+
+                  {/* Title */}
+                  <div className="flex flex-col gap-1.5">
+                    <label htmlFor="edit-title" className="font-semibold text-neutral-700 text-xs">
+                      Judul Tugas <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      id="edit-title"
+                      type="text"
+                      required
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      placeholder="Masukkan judul tugas..."
+                      className="h-9 w-full rounded border border-neutral-300 px-3 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-neutral-900 bg-white"
+                    />
+                  </div>
+
+                  {/* Description */}
+                  <div className="flex flex-col gap-1.5">
+                    <label htmlFor="edit-desc" className="font-semibold text-neutral-700 text-xs">
+                      Deskripsi / Instruksi
+                    </label>
+                    <textarea
+                      id="edit-desc"
+                      rows={3}
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      placeholder="Berikan instruksi detail tugas..."
+                      className="w-full rounded border border-neutral-300 p-2.5 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-neutral-900 bg-white"
+                    />
+                  </div>
+
+                  {/* Deadline */}
+                  <div className="flex flex-col gap-1.5">
+                    <label htmlFor="edit-deadline" className="font-semibold text-neutral-700 text-xs">
+                      Tenggat Waktu (Deadline) <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      id="edit-deadline"
+                      type="datetime-local"
+                      required
+                      value={editDeadline}
+                      onChange={(e) => setEditDeadline(e.target.value)}
+                      className="h-9 w-full rounded border border-neutral-300 px-3 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-neutral-900 bg-white"
+                    />
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex justify-end gap-2 border-t border-neutral-100 pt-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setEditingAssignment(null)}
+                      className="border-neutral-200 text-neutral-600 hover:bg-neutral-50 cursor-pointer"
+                    >
+                      Batal
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={editLoading}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium cursor-pointer"
+                    >
+                      {editLoading ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" />
+                          Menyimpan...
+                        </>
+                      ) : (
+                        'Simpan Perubahan'
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* DELETE ASSIGNMENT MODAL OVERLAY */}
+          {deletingAssignment && (
+            <div className="fixed inset-0 bg-neutral-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+              <div className="bg-white border border-neutral-200 rounded-lg shadow-xl max-w-md w-full p-6 space-y-4">
+                <div className="flex items-start gap-3 border-b border-neutral-100 pb-4 bg-red-50/10 p-4 -m-6 mb-2 rounded-t-lg">
+                  <div className="p-2 bg-red-100 text-red-650 rounded-lg shrink-0">
+                    <Trash2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-neutral-900 text-base">Hapus Tugas?</h3>
+                    <p className="text-neutral-550 text-xs mt-0.5">Konfirmasi penghapusan tugas beserta semua data terkait.</p>
+                  </div>
+                </div>
+
+                {deleteError && (
+                  <div className="p-3 bg-red-50 border border-red-100 text-red-700 rounded-md text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+                    {deleteError}
+                  </div>
+                )}
+
+                <div className="text-neutral-600 text-sm leading-relaxed space-y-2">
+                  <p>
+                    Apakah Anda yakin ingin menghapus tugas <strong className="text-neutral-950 font-bold">"{deletingAssignment.title}"</strong>?
+                  </p>
+                  <p className="text-xs bg-red-50 border border-red-100 p-2.5 rounded text-red-750 font-medium">
+                    ⚠️ <strong>PENTING:</strong> Menghapus tugas ini juga akan <strong>menghapus secara permanen semua berkas PDF pengumpulan mahasiswa dan nilai tugas</strong> terkait tugas ini dari portal.
+                  </p>
+                </div>
+
+                {/* Actions */}
+                <div className="flex justify-end gap-2 border-t border-neutral-100 pt-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setDeletingAssignment(null)}
+                    disabled={deleteLoading}
+                    className="border-neutral-200 text-neutral-600 hover:bg-neutral-50 cursor-pointer"
+                  >
+                    Batal
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleDeleteAssignment}
+                    disabled={deleteLoading}
+                    className="bg-red-600 hover:bg-red-700 text-white font-medium cursor-pointer"
+                  >
+                    {deleteLoading ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" />
+                        Menghapus...
+                      </>
+                    ) : (
+                      'Hapus Permanen'
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
           )}

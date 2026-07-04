@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, GraduationCap, LogOut, BookMarked, FileSpreadsheet, FileText, ChevronLeft, ChevronRight, Menu } from 'lucide-react'
+import { LayoutDashboard, GraduationCap, LogOut, BookMarked, FileSpreadsheet, FileText, ChevronLeft, ChevronRight, Menu, Calendar } from 'lucide-react'
 
 interface Profile {
   name: string | null
@@ -59,6 +59,11 @@ export default function Sidebar({ profile, onLogout }: SidebarProps) {
       name: 'Tugas Kuliah',
       href: '/mahasiswa/assignments',
       icon: FileText,
+    },
+    {
+      name: 'Jadwal Kuliah',
+      href: '/mahasiswa/schedules',
+      icon: Calendar,
     },
     {
       name: 'Hasil Studi',

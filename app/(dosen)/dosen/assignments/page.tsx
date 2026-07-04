@@ -1,0 +1,85 @@
+import React from 'react'
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { GraduationCap, FileText } from 'lucide-react'
+import AssignmentManager from './AssignmentManager'
+
+export const dynamic = 'force-dynamic'
+
+export default async function DosenAssignmentsPage() {
+  const supabase = await createClient()
+
+  // 1. Authenticate user
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    redirect('/login')
+  }
+
+  // 2. Fetch user profile role and name
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role, name')
+    .eq('id', user.id)
+    .single()
+
+  if (profileError || !profile) {
+    redirect('/login')
+  }
+
+  const role = profile.role?.toUpperCase()
+  if (role !== 'DOSEN' && role !== 'LECTURER') {
+    redirect('/login')
+  }
+
+  // 3. Fetch courses taught by the lecturer
+  const { data: coursesData } = await supabase
+    .from('courses')
+    .select('id, name, code')
+    .eq('lecturer_id', user.id)
+
+  const courses = coursesData || []
+
+  return (
+    <div className="min-h-screen bg-[#FAFAFA] text-[#171717] flex flex-col font-sans antialiased">
+      {/* Header */}
+      <header className="border-b border-neutral-200 bg-white px-6 py-4 flex items-center justify-between shadow-2xs">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600 border border-indigo-100">
+            <GraduationCap className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="font-bold text-base tracking-tight block">Portal Dosen</span>
+            <span className="text-xs text-neutral-500 font-medium">Layanan Tugas Kuliah</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-neutral-500 font-mono bg-neutral-100 px-2 py-1 rounded border border-neutral-200">
+            {profile.name}
+          </span>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 max-w-5xl w-full mx-auto p-6 md:p-8 space-y-8">
+        {/* Page Title */}
+        <div className="flex flex-col gap-1.5 border-b border-neutral-200 pb-5">
+          <div className="text-xs font-bold text-indigo-600 uppercase tracking-widest">Dosen Dashboard</div>
+          <h1 className="text-3xl font-bold tracking-tight text-neutral-900 flex items-center gap-2">
+            <FileText className="w-8 h-8 text-indigo-600 shrink-0" />
+            Kelola Tugas & Evaluasi
+          </h1>
+          <p className="text-neutral-500 text-sm max-w-2xl">
+            Rilis tugas baru, periksa berkas PDF pengumpulan tugas mahasiswa, dan berikan penilaian serta catatan feedback interaktif.
+          </p>
+        </div>
+
+        {/* Dynamic Assignment Manager View */}
+        <AssignmentManager courses={courses} />
+      </main>
+    </div>
+  )
+}

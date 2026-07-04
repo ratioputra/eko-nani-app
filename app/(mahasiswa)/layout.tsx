@@ -1,0 +1,67 @@
+import React from 'react'
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import Sidebar from './Sidebar'
+
+export const dynamic = 'force-dynamic'
+
+interface Profile {
+  name: string | null
+  email: string
+  role: string
+  nim?: string | null
+}
+
+export default async function MahasiswaLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const supabase = await createClient()
+
+  // 1. Authenticate user
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    redirect('/login')
+  }
+
+  // 2. Fetch user profile (select '*' dynamically covers nim column additions)
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single()
+
+  if (profileError || !profile) {
+    redirect('/login')
+  }
+
+  const role = profile.role?.toUpperCase()
+  if (role !== 'MAHASISWA' && role !== 'STUDENT') {
+    redirect('/login')
+  }
+
+  // 3. Logout action
+  async function handleLogout() {
+    'use server'
+    const supabaseClient = await createClient()
+    await supabaseClient.auth.signOut()
+    redirect('/login')
+  }
+
+  return (
+    <div className="min-h-screen bg-[#FAFAFA] flex text-[#171717]">
+      {/* Sidebar navigation */}
+      <Sidebar profile={profile} onLogout={handleLogout} />
+
+      {/* Main page content area */}
+      <div className="flex-1 flex flex-col min-h-screen overflow-y-auto">
+        {children}
+      </div>
+    </div>
+  )
+}

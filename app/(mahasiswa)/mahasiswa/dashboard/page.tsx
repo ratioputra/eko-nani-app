@@ -402,7 +402,7 @@ export default async function MahasiswaDashboardPage() {
               {/* Bottom footer trigger */}
               <div className="p-3.5 border-t border-neutral-100 bg-neutral-50/20 text-center">
                 <Link
-                  href="/mahasiswa/courses"
+                  href="/mahasiswa/schedules"
                   className="text-xs text-indigo-600 hover:text-indigo-800 font-bold tracking-wide"
                 >
                   [ Selengkapnya → ]

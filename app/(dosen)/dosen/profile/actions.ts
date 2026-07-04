@@ -53,7 +53,8 @@ export async function updateInstitutionSettingsAction(
   facultyDefault: string,
   departmentDefault: string,
   address: string,
-  phone: string
+  phone: string,
+  krsStatus: boolean
 ) {
   try {
     const supabase = await createClient()
@@ -93,6 +94,7 @@ export async function updateInstitutionSettingsAction(
         department_default: departmentDefault.trim(),
         address: address.trim(),
         phone: phone.trim(),
+        krs_status: krsStatus,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
@@ -104,6 +106,7 @@ export async function updateInstitutionSettingsAction(
 
     revalidatePath('/dosen/profile')
     revalidatePath('/dosen/grades')
+    revalidatePath('/mahasiswa/courses')
     return { success: true }
   } catch (error: any) {
     console.error('Unhandled updateInstitutionSettingsAction error:', error)

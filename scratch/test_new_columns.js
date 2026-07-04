@@ -18,29 +18,12 @@ const supabaseKey = env['NEXT_PUBLIC_SUPABASE_ANON_KEY'];
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function main() {
-  const { data, error } = await supabase
-    .from('schedules')
-    .select(`
-      id,
-      course_id,
-      day,
-      start_time,
-      end_time,
-      is_online,
-      room_number,
-      meeting_link,
-      courses(
-        name,
-        code,
-        profiles:lecturer_id(name)
-      )
-    `)
-    .limit(1);
-
+  const { data, error } = await supabase.from('institution_settings').select('*').limit(1);
   if (error) {
-    console.log('Error selecting schedules with courses and profiles:', error);
+    console.log('Error selecting institution_settings:', error);
   } else {
-    console.log('Successfully queried schedules with joined course and profiles! Data:', JSON.stringify(data, null, 2));
+    console.log('Columns on institution_settings:', Object.keys(data[0] || {}));
+    console.log('Row values:', data[0]);
   }
 }
 

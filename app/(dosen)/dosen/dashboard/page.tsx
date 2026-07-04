@@ -28,6 +28,7 @@ interface ScheduleRow {
   id: string
   course_id: string
   day: string
+  class_date: string | null
   start_time: string | null
   end_time: string | null
   is_online: boolean
@@ -104,7 +105,7 @@ export default async function DosenDashboardPage() {
       supabase.from('grades').select('course_id, student_id').in('course_id', courseIds),
       supabase
         .from('schedules')
-        .select('id, course_id, day, start_time, end_time, is_online, room_number, meeting_link, courses(name, code)')
+        .select('id, course_id, day, class_date, start_time, end_time, is_online, room_number, meeting_link, courses(name, code)')
         .in('course_id', courseIds),
       supabase
         .from('assignments')

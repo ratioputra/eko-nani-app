@@ -16,6 +16,7 @@ interface ScheduleData {
   id: string
   course_id: string
   day: string
+  class_date: string | null
   start_time: string | null
   end_time: string | null
   is_online: boolean
@@ -58,6 +59,25 @@ function formatTime(timeStr: string | null): string {
   return timeStr
 }
 
+// Helper to construct local Date object combining class date and end time
+function getClassEndTime(classDateStr: string | null, endTimeStr: string | null) {
+  if (!classDateStr) return new Date(0)
+  try {
+    const [year, month, day] = classDateStr.split('-')
+    const [hours, minutes, seconds] = (endTimeStr || '23:59:00').split(':')
+    return new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hours),
+      Number(minutes),
+      Number(seconds || 0)
+    )
+  } catch (e) {
+    return new Date(0)
+  }
+}
+
 export default function DashboardMiddleSection({
   schedules,
   todayDayName,
@@ -68,6 +88,9 @@ export default function DashboardMiddleSection({
   const [selectedDate, setSelectedDate] = useState<Date>(todayDate)
   const [currentMonth, setCurrentMonth] = useState<number>(todayDate.getMonth())
   const [currentYear, setCurrentYear] = useState<number>(todayDate.getFullYear())
+
+  // Establish the precise lecturer baseline time (July 4, 2026, 23:58:00)
+  const currentTime = new Date(2026, 6, 4, 23, 58, 0)
 
   // Handle Month Navigation
   const handlePrevMonth = () => {
@@ -113,13 +136,8 @@ export default function DashboardMiddleSection({
     .sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''))
 
   // 2. "Jadwal Berikutnya" filters (schedules on future days, sorted chronologically)
-  const todayIndex = dayOrder[todayDayName] || 0
   const upcomingClasses = schedules
-    .filter((s) => {
-      const classIndex = dayOrder[s.day] || 0
-      // Next days or earlier in the week (circular week)
-      return s.day !== todayDayName
-    })
+    .filter((s) => s.day !== todayDayName)
     .sort((a, b) => {
       const indexA = dayOrder[a.day] || 9
       const indexB = dayOrder[b.day] || 9
@@ -165,56 +183,65 @@ export default function DashboardMiddleSection({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {todayClasses.map((s) => (
-                    <div
-                      key={s.id}
-                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between border border-neutral-150 rounded-md p-3.5 bg-neutral-50/20 hover:border-neutral-300 transition-colors gap-3"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold bg-white border border-neutral-200 text-neutral-500 px-2 py-0.5 rounded font-mono">
-                            {s.courses?.code}
-                          </span>
-                          <span className="text-[10px] font-semibold text-indigo-600 flex items-center gap-0.5 font-mono bg-indigo-50/50 px-1.5 py-0.5 rounded">
-                            <Clock className="w-3 h-3 text-indigo-400" />
-                            {formatTime(s.start_time)} - {formatTime(s.end_time)}
-                          </span>
-                        </div>
-                        <h4 className="font-bold text-neutral-900 text-sm">{s.courses?.name}</h4>
-                      </div>
+                  {todayClasses.map((s) => {
+                    const classEndTime = getClassEndTime(s.class_date, s.end_time)
+                    const isPast = classEndTime.getTime() < currentTime.getTime()
 
-                      <div className="flex items-center gap-3 self-start sm:self-auto text-xs">
-                        {s.is_online ? (
-                          <>
-                            <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-100">
-                              <Video className="w-3 h-3" />
-                              Daring
+                    return (
+                      <div
+                        key={s.id}
+                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between border border-neutral-150 rounded-md p-3.5 bg-neutral-50/20 hover:border-neutral-300 transition-colors gap-3"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold bg-white border border-neutral-200 text-neutral-500 px-2 py-0.5 rounded font-mono">
+                              {s.courses?.code}
                             </span>
-                            {s.meeting_link && (
-                              <a
-                                href={s.meeting_link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-0.5 font-semibold text-indigo-600 hover:underline"
-                              >
-                                Join <ExternalLink className="w-3 h-3" />
-                              </a>
-                            )}
-                          </>
-                        ) : (
-                          <>
-                            <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-semibold bg-neutral-100 text-neutral-600 border border-neutral-250">
-                              <MapPin className="w-3 h-3" />
-                              Luring
+                            <span className="text-[10px] font-semibold text-indigo-600 flex items-center gap-0.5 font-mono bg-indigo-50/50 px-1.5 py-0.5 rounded">
+                              <Clock className="w-3 h-3 text-indigo-400" />
+                              {formatTime(s.start_time)} - {formatTime(s.end_time)}
                             </span>
-                            <span className="font-bold text-neutral-800 bg-white border border-neutral-200 px-2 py-0.5 rounded-md shadow-2xs font-mono">
-                              Ruang {s.room_number || '-'}
-                            </span>
-                          </>
-                        )}
+                          </div>
+                          <h4 className={`font-bold text-sm ${isPast ? 'line-through text-neutral-400' : 'text-neutral-900'}`}>
+                            {s.courses?.name}
+                          </h4>
+                        </div>
+
+                        <div className="flex items-center gap-3 self-start sm:self-auto text-xs">
+                          {isPast ? (
+                            <span className="text-red-600 font-semibold text-xs">Selesai</span>
+                          ) : s.is_online ? (
+                            <>
+                              <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+                                <Video className="w-3 h-3" />
+                                Daring
+                              </span>
+                              {s.meeting_link && (
+                                <a
+                                  href={s.meeting_link}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-0.5 font-semibold text-indigo-600 hover:underline"
+                                >
+                                  Join <ExternalLink className="w-3 h-3" />
+                                </a>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-semibold bg-neutral-100 text-neutral-600 border border-neutral-250">
+                                <MapPin className="w-3 h-3" />
+                                Luring
+                              </span>
+                              <span className="font-bold text-neutral-800 bg-white border border-neutral-200 px-2 py-0.5 rounded-md shadow-2xs font-mono">
+                                Ruang {s.room_number || '-'}
+                              </span>
+                            </>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -228,27 +255,38 @@ export default function DashboardMiddleSection({
                 <p className="text-xs text-neutral-400 italic">Tidak ada jadwal kuliah lain.</p>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {upcomingClasses.map((s) => (
-                    <div
-                      key={s.id}
-                      className="border border-neutral-200 p-3 rounded-md bg-white space-y-1.5"
-                    >
-                      <div className="flex items-center justify-between text-[10px]">
-                        <span className="font-bold text-neutral-400 uppercase tracking-wide font-mono">
-                          {s.day}
-                        </span>
-                        <span className="font-semibold text-neutral-500 font-mono">
-                          {formatTime(s.start_time)}
+                  {upcomingClasses.map((s) => {
+                    const classEndTime = getClassEndTime(s.class_date, s.end_time)
+                    const isPast = classEndTime.getTime() < currentTime.getTime()
+
+                    return (
+                      <div
+                        key={s.id}
+                        className="border border-neutral-200 p-3 rounded-md bg-white space-y-1.5"
+                      >
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className="font-bold text-neutral-400 uppercase tracking-wide font-mono">
+                            {s.day}
+                          </span>
+                          <span className="font-semibold text-neutral-500 font-mono">
+                            {formatTime(s.start_time)}
+                          </span>
+                        </div>
+                        <h4 className={`font-bold text-xs line-clamp-1 ${isPast ? 'line-through text-neutral-400' : 'text-neutral-800'}`}>
+                          {s.courses?.name}
+                        </h4>
+                        <span className="text-[10px] text-neutral-400 block font-mono">
+                          {isPast ? (
+                            <span className="text-red-600 font-semibold text-xs">Selesai</span>
+                          ) : s.is_online ? (
+                            'Kelas Daring (Online)'
+                          ) : (
+                            `Ruang ${s.room_number || '-'}`
+                          )}
                         </span>
                       </div>
-                      <h4 className="font-bold text-neutral-800 text-xs line-clamp-1">
-                        {s.courses?.name}
-                      </h4>
-                      <span className="text-[10px] text-neutral-400 block font-mono">
-                        {s.is_online ? 'Kelas Daring (Online)' : `Ruang ${s.room_number || '-'}`}
-                      </span>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -363,24 +401,35 @@ export default function DashboardMiddleSection({
                   Tidak ada jadwal mengajar pada hari ini.
                 </p>
               ) : (
-                calendarSelectedClasses.map((s) => (
-                  <div
-                    key={s.id}
-                    className="p-2.5 bg-neutral-50/50 border border-neutral-200 rounded text-xs space-y-1 hover:border-neutral-300 transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-neutral-800 line-clamp-1 max-w-[140px]">
-                        {s.courses?.name}
-                      </span>
-                      <span className="font-mono font-bold text-[10px] text-indigo-600 bg-indigo-50 px-1 py-0.5 rounded">
-                        {formatTime(s.start_time)}
+                calendarSelectedClasses.map((s) => {
+                  const classEndTime = getClassEndTime(s.class_date, s.end_time)
+                  const isPast = classEndTime.getTime() < currentTime.getTime()
+
+                  return (
+                    <div
+                      key={s.id}
+                      className="p-2.5 bg-neutral-50/50 border border-neutral-200 rounded text-xs space-y-1 hover:border-neutral-300 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className={`font-bold line-clamp-1 max-w-[140px] ${isPast ? 'line-through text-neutral-400' : 'text-neutral-800'}`}>
+                          {s.courses?.name}
+                        </span>
+                        <span className="font-mono font-bold text-[10px] text-indigo-600 bg-indigo-50 px-1 py-0.5 rounded">
+                          {formatTime(s.start_time)}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-neutral-400 block font-mono">
+                        {isPast ? (
+                          <span className="text-red-600 font-semibold text-xs">Selesai</span>
+                        ) : s.is_online ? (
+                          'Daring (Online)'
+                        ) : (
+                          `Ruang ${s.room_number || '-'}`
+                        )}
                       </span>
                     </div>
-                    <span className="text-[10px] text-neutral-400 block font-mono">
-                      {s.is_online ? 'Daring (Online)' : `Ruang ${s.room_number || '-'}`}
-                    </span>
-                  </div>
-                ))
+                  )
+                })
               )}
             </div>
           </div>

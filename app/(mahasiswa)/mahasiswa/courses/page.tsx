@@ -1,7 +1,7 @@
 import React from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { BookMarked, GraduationCap } from 'lucide-react'
+import { BookMarked, GraduationCap, Lock } from 'lucide-react'
 import KrsCourseList from './KrsCourseList'
 
 export const dynamic = 'force-dynamic'
@@ -65,6 +65,13 @@ export default async function MahasiswaCoursesPage() {
 
   const enrolledCourseIds = (gradesData as GradeRow[])?.map((g) => g.course_id) || []
 
+  // 5. Fetch KRS status from institution settings
+  const { data: instSettings } = await supabase
+    .from('institution_settings')
+    .select('krs_status')
+    .single()
+  const isKrsLocked = instSettings ? !instSettings.krs_status : false
+
   return (
     <div className="min-h-screen bg-[#FAFAFA] text-[#171717] flex flex-col font-sans antialiased">
       {/* Header */}
@@ -100,8 +107,21 @@ export default async function MahasiswaCoursesPage() {
           </p>
         </div>
 
-        {/* Krs Course list with filtering and search */}
-        <KrsCourseList courses={courses} enrolledCourseIds={enrolledCourseIds} />
+        {isKrsLocked ? (
+          /* Beautiful, centered minimalist alert box (Notion-style) with Lock icon */
+          <div className="bg-white border border-neutral-200 rounded-lg p-16 text-center flex flex-col items-center justify-center shadow-xs">
+            <div className="w-12 h-12 rounded-full bg-amber-55 border border-amber-200 flex items-center justify-center text-amber-600 mb-4">
+              <Lock className="w-5 h-5 text-amber-600" />
+            </div>
+            <h3 className="text-lg font-bold text-neutral-900">Pengisian KRS Dikunci</h3>
+            <p className="text-sm text-neutral-500 mt-2 max-w-lg leading-relaxed font-medium">
+              Masa pengisian atau perubahan Kartu Rencana Studi (KRS) untuk semester ini belum dibuka atau telah resmi ditutup oleh bagian akademik. Silakan hubungi dosen pengampu jika ada kendala.
+            </p>
+          </div>
+        ) : (
+          /* Krs Course list with filtering and search */
+          <KrsCourseList courses={courses} enrolledCourseIds={enrolledCourseIds} isKrsLocked={isKrsLocked} />
+        )}
 
       </main>
     </div>

@@ -19,9 +19,10 @@ interface CourseRow {
 interface KrsCourseListProps {
   courses: CourseRow[]
   enrolledCourseIds: string[]
+  isKrsLocked?: boolean
 }
 
-export default function KrsCourseList({ courses, enrolledCourseIds }: KrsCourseListProps) {
+export default function KrsCourseList({ courses, enrolledCourseIds, isKrsLocked = false }: KrsCourseListProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedProdi, setSelectedProdi] = useState('')
   const [selectedSemester, setSelectedSemester] = useState('')
@@ -62,6 +63,7 @@ export default function KrsCourseList({ courses, enrolledCourseIds }: KrsCourseL
   })
 
   const handleEnroll = async (courseId: string) => {
+    if (isKrsLocked) return
     setErrorMsg(null)
     setSuccessMsg(null)
     setLoadingCourseId(courseId)
@@ -84,6 +86,13 @@ export default function KrsCourseList({ courses, enrolledCourseIds }: KrsCourseL
 
   return (
     <div className="space-y-6">
+      {/* KRS Locked Banner */}
+      {isKrsLocked && (
+        <div className="p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-xs sm:text-sm font-semibold flex items-start sm:items-center gap-2.5 shadow-3xs">
+          <span>⚠️ Status KRS saat ini DITUTUP. Fitur pengambilan mata kuliah terkunci.</span>
+        </div>
+      )}
+
       {/* Feedback Alerts */}
       {errorMsg && (
         <div className="p-4 bg-red-50 border border-red-100 text-red-700 rounded-md text-sm font-medium">
@@ -229,11 +238,18 @@ export default function KrsCourseList({ courses, enrolledCourseIds }: KrsCourseL
                             <Check className="w-3.5 h-3.5 text-neutral-400" />
                             Sudah Diambil
                           </span>
+                        ) : isKrsLocked ? (
+                          <Button
+                            disabled={true}
+                            className="bg-neutral-50 border border-neutral-200 text-neutral-400 font-semibold px-3.5 py-1.5 rounded-md text-xs shadow-3xs transition-colors shrink-0 h-8 flex items-center gap-1 ml-auto cursor-not-allowed"
+                          >
+                            Terkunci
+                          </Button>
                         ) : (
                           <Button
                             onClick={() => handleEnroll(course.id)}
                             disabled={isLoadingThis || isPending}
-                            className="bg-white hover:bg-indigo-50 border border-indigo-600 hover:border-indigo-700 text-indigo-600 hover:text-indigo-700 font-semibold px-3.5 py-1.5 rounded-md text-xs shadow-3xs transition-colors shrink-0 h-8 flex items-center gap-1 ml-auto"
+                            className="bg-white hover:bg-indigo-50 border border-indigo-600 hover:border-indigo-700 text-indigo-600 hover:text-indigo-700 font-semibold px-3.5 py-1.5 rounded-md text-xs shadow-3xs transition-colors shrink-0 h-8 flex items-center gap-1 ml-auto cursor-pointer"
                           >
                             {isLoadingThis ? (
                               <>

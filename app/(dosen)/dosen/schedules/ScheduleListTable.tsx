@@ -62,6 +62,25 @@ function formatClassDate(dateStr: string | null, dayName: string): string {
   }
 }
 
+function getClassEndTime(classDateStr: string | null, endTimeStr: string | null) {
+  if (!classDateStr) return new Date(0)
+  try {
+    const [year, month, day] = classDateStr.split('-')
+    const [hours, minutes, seconds] = (endTimeStr || '23:59:00').split(':')
+    return new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hours),
+      Number(minutes),
+      Number(seconds || 0)
+    )
+  } catch (e) {
+    return new Date(0)
+  }
+}
+
+
 export default function ScheduleListTable({ initialSchedules, courses }: ScheduleListTableProps) {
   const router = useRouter()
   const [schedules, setSchedules] = useState<ScheduleRow[]>(initialSchedules)
@@ -86,6 +105,10 @@ export default function ScheduleListTable({ initialSchedules, courses }: Schedul
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
+  // Search and status filters
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+
   const showToastMsg = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type })
     setTimeout(() => {
@@ -105,6 +128,32 @@ export default function ScheduleListTable({ initialSchedules, courses }: Schedul
     const dateDiff = dateA.localeCompare(dateB)
     if (dateDiff !== 0) return dateDiff
     return (a.start_time || '').localeCompare(b.start_time || '')
+  })
+
+  // Filter and Search logic
+  const filteredSchedules = sortedSchedules.filter((schedule) => {
+    // 1. Search Query Match
+    const courseName = schedule.courses?.name || ''
+    const courseCode = schedule.courses?.code || ''
+    const roomName = schedule.room_number || ''
+    const matchesSearch =
+      courseName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      courseCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      roomName.toLowerCase().includes(searchQuery.toLowerCase())
+
+    // 2. Status Filter Match
+    const classEndTime = getClassEndTime(schedule.class_date, schedule.end_time)
+    const currentTime = new Date(2026, 6, 5, 0, 2, 0) // July 5, 2026, 00:02 WIB
+    const isPast = classEndTime.getTime() < currentTime.getTime()
+
+    let matchesStatus = true
+    if (statusFilter === 'active') {
+      matchesStatus = !isPast
+    } else if (statusFilter === 'past') {
+      matchesStatus = isPast
+    }
+
+    return matchesSearch && matchesStatus
   })
 
   // Open edit modal
@@ -276,19 +325,62 @@ export default function ScheduleListTable({ initialSchedules, courses }: Schedul
           </p>
         </div>
         <span className="text-xs font-semibold bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full border border-indigo-100 font-mono">
-          {sortedSchedules.length} Jadwal
+          {filteredSchedules.length} Jadwal
         </span>
       </div>
 
+      {/* Search and Status Filters Control Bar */}
+      <div className="border-b border-neutral-200 bg-white px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
+        {/* Search Bar (Left side) */}
+        <div className="relative w-full md:max-w-md">
+          <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-neutral-450">
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              ></path>
+            </svg>
+          </span>
+          <input
+            type="text"
+            placeholder="Cari mata kuliah atau ruangan..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-9 w-full rounded-md border border-neutral-300 bg-white pl-9 pr-3 py-1 text-xs shadow-3xs transition-colors focus:border-indigo-500 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 text-neutral-800 placeholder-neutral-450"
+          />
+        </div>
+
+        {/* Status Dropdown Filter (Right side) */}
+        <div className="flex items-center gap-2 w-full md:w-auto shrink-0 justify-end">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="h-9 w-full md:w-[220px] rounded-md border border-neutral-300 bg-white px-3 py-1 text-xs shadow-3xs transition-colors focus:border-indigo-500 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 text-neutral-800 font-medium cursor-pointer"
+          >
+            <option value="all">Semua Jadwal</option>
+            <option value="active">Kelas Aktif (Mendatang)</option>
+            <option value="past">Kelas Selesai</option>
+          </select>
+        </div>
+      </div>
+
       {/* List content */}
-      {sortedSchedules.length === 0 ? (
+      {filteredSchedules.length === 0 ? (
         <div className="p-12 text-center flex flex-col items-center justify-center">
-          <div className="w-12 h-12 rounded-full bg-neutral-50 border border-neutral-200 flex items-center justify-center text-neutral-455 mb-3">
+          <div className="w-12 h-12 rounded-full bg-neutral-50 border border-neutral-200 flex items-center justify-center text-neutral-400 mb-3">
             <Calendar className="w-6 h-6 text-neutral-400" />
           </div>
-          <h3 className="text-sm font-semibold text-neutral-800">Belum ada jadwal mengajar</h3>
+          <h3 className="text-sm font-semibold text-neutral-800">Tidak ada jadwal yang cocok</h3>
           <p className="text-xs text-neutral-500 mt-1 max-w-sm">
-            Anda belum menambahkan jadwal mengajar untuk mata kuliah Anda. Silakan isi form di atas untuk membuat jadwal baru.
+            Coba sesuaikan kata kunci pencarian atau filter status Anda.
           </p>
         </div>
       ) : (
@@ -304,14 +396,19 @@ export default function ScheduleListTable({ initialSchedules, courses }: Schedul
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100 text-sm">
-              {sortedSchedules.map((schedule) => {
+              {filteredSchedules.map((schedule) => {
                 const courseName = schedule.courses?.name || 'Mata Kuliah'
                 const courseCode = schedule.courses?.code || '-'
+
+                const classEndTime = getClassEndTime(schedule.class_date, schedule.end_time)
+                const currentTime = new Date(2026, 6, 5, 0, 2, 0) // July 5, 2026, 00:02 WIB
+                const isPast = classEndTime.getTime() < currentTime.getTime()
+
                 return (
                   <tr key={schedule.id} className="hover:bg-neutral-50/50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
-                        <span className="font-semibold text-neutral-900">{courseName}</span>
+                        <span className={`font-semibold ${isPast ? 'line-through text-neutral-400' : 'text-neutral-900'}`}>{courseName}</span>
                         <span className="text-xs text-neutral-500 font-mono font-medium mt-0.5">{courseCode}</span>
                       </div>
                     </td>
@@ -326,20 +423,24 @@ export default function ScheduleListTable({ initialSchedules, courses }: Schedul
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      {schedule.is_online ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
-                          <Video className="w-3 h-3" />
-                          Online
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-neutral-100 text-neutral-700 border border-neutral-200">
-                          <MapPin className="w-3 h-3" />
-                          Offline
-                        </span>
+                      {!isPast && (
+                        schedule.is_online ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+                            <Video className="w-3 h-3" />
+                            Online
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-neutral-100 text-neutral-700 border border-neutral-200">
+                            <MapPin className="w-3 h-3" />
+                            Offline
+                          </span>
+                        )
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      {schedule.is_online ? (
+                      {isPast ? (
+                        <span className="text-red-600 font-semibold text-xs">Selesai</span>
+                      ) : schedule.is_online ? (
                         schedule.meeting_link ? (
                           <a
                             href={schedule.meeting_link}

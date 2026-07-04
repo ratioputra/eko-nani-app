@@ -15,6 +15,7 @@ interface InstitutionSettings {
   department_default: string | null
   address: string | null
   phone: string | null
+  krs_status: boolean
 }
 
 interface InstitutionFormProps {
@@ -28,6 +29,7 @@ export default function InstitutionForm({ initialSettings }: InstitutionFormProp
   const [departmentDefault, setDepartmentDefault] = useState(initialSettings?.department_default || '')
   const [address, setAddress] = useState(initialSettings?.address || '')
   const [phone, setPhone] = useState(initialSettings?.phone || '')
+  const [krsStatus, setKrsStatus] = useState<boolean>(initialSettings?.krs_status || false)
 
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -52,7 +54,8 @@ export default function InstitutionForm({ initialSettings }: InstitutionFormProp
         facultyDefault,
         departmentDefault,
         address,
-        phone
+        phone,
+        krsStatus
       )
       if (result?.error) {
         setErrorMsg(result.error)
@@ -171,6 +174,22 @@ export default function InstitutionForm({ initialSettings }: InstitutionFormProp
                 placeholder="Contoh: (0274) 123456"
                 className="border-neutral-300 focus-visible:border-indigo-500 focus-visible:ring-indigo-500/30 text-neutral-900 bg-white"
               />
+            </div>
+
+            {/* Status Pengisian KRS Mahasiswa */}
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="krs-status" className="text-neutral-700 font-semibold text-xs uppercase tracking-wider flex items-center gap-1.5">
+                Status Pengisian KRS Mahasiswa
+              </Label>
+              <select
+                id="krs-status"
+                value={krsStatus ? 'true' : 'false'}
+                onChange={(e) => setKrsStatus(e.target.value === 'true')}
+                className="h-9 w-full rounded-md border border-neutral-300 bg-white px-3 py-1 text-sm shadow-3xs transition-colors focus:border-indigo-500 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 text-neutral-800 font-medium cursor-pointer"
+              >
+                <option value="true">Dibuka (Mahasiswa Bebas Memilih)</option>
+                <option value="false">Dikunci (Fitur KRS Ditutup)</option>
+              </select>
             </div>
 
             {/* Save Button */}

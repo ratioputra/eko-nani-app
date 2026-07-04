@@ -34,7 +34,6 @@ interface DashboardMiddleSectionProps {
   todayFormatted: string
 }
 
-// Day mapping for ordering / comparisons
 const dayOrder: Record<string, number> = {
   'Senin': 1,
   'Selasa': 2,
@@ -59,22 +58,15 @@ function formatTime(timeStr: string | null): string {
   return timeStr
 }
 
-// Helper to construct local Date object combining class date and end time
-function getClassEndTime(classDateStr: string | null, endTimeStr: string | null) {
-  if (!classDateStr) return new Date(0)
+function checkIsPast(classDate: string | null, endTime: string | null, currentTimestamp: number): boolean {
+  if (!classDate) return true
   try {
-    const [year, month, day] = classDateStr.split('-')
-    const [hours, minutes, seconds] = (endTimeStr || '23:59:00').split(':')
-    return new Date(
-      Number(year),
-      Number(month) - 1,
-      Number(day),
-      Number(hours),
-      Number(minutes),
-      Number(seconds || 0)
-    )
+    const [year, month, day] = classDate.split("-").map(Number)
+    const [hours, minutes] = (endTime || "23:59").split(":").map(Number)
+    const localClassEndTime = new Date(year, month - 1, day, hours, minutes, 0).getTime()
+    return localClassEndTime < currentTimestamp
   } catch (e) {
-    return new Date(0)
+    return true
   }
 }
 
@@ -83,14 +75,15 @@ export default function DashboardMiddleSection({
   todayDayName,
   todayFormatted,
 }: DashboardMiddleSectionProps) {
-  // Calendar states
-  const todayDate = new Date()
-  const [selectedDate, setSelectedDate] = useState<Date>(todayDate)
-  const [currentMonth, setCurrentMonth] = useState<number>(todayDate.getMonth())
-  const [currentYear, setCurrentYear] = useState<number>(todayDate.getFullYear())
+  // Inisialisasi langsung ke waktu acuan simulasi (5 Juli 2026)
+  const targetTodayStr = "2026-07-05"
+  const currentTimestamp = new Date(2026, 6, 5, 1, 6, 31).getTime()
+  const simulatedToday = new Date(2026, 6, 5)
 
-  // Establish the precise lecturer baseline time (July 4, 2026, 23:58:00)
-  const currentTime = new Date(2026, 6, 4, 23, 58, 0)
+  // Calendar states
+  const [selectedDate, setSelectedDate] = useState<Date>(simulatedToday)
+  const [currentMonth, setCurrentMonth] = useState<number>(simulatedToday.getMonth())
+  const [currentYear, setCurrentYear] = useState<number>(simulatedToday.getFullYear())
 
   // Handle Month Navigation
   const handlePrevMonth = () => {
@@ -111,56 +104,48 @@ export default function DashboardMiddleSection({
     }
   }
 
-  // Calculate calendar variables
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
-  // Day index of first day (0 = Sun, 1 = Mon ... 6 = Sat)
   const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay()
 
-  // Generate calendar days grid array
   const calendarDays: (number | null)[] = []
-  // Fill leading empty padding cells
   for (let i = 0; i < firstDayIndex; i++) {
     calendarDays.push(null)
   }
-  // Fill calendar days
   for (let d = 1; d <= daysInMonth; d++) {
     calendarDays.push(d)
   }
 
-  // Get selected date day name (in Indonesian)
   const selectedDayName = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(selectedDate)
 
-  // 1. "Kelas Hari Ini" filters (matches todayDayName)
+  // Format tanggal terpilih ke YYYY-MM-DD agar pencarian di kalender akurat secara spesifik per tanggal
+  const formattedSelectedDateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
+
+  // 1. Filter Kelas Hari Ini
   const todayClasses = schedules
-    .filter((s) => s.day === todayDayName)
+    .filter((s) => s.class_date === targetTodayStr)
     .sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''))
 
-  // 2. "Jadwal Berikutnya" filters (schedules on future days, sorted chronologically)
+  // 2. Filter Jadwal Berikutnya (hanya menampilkan kelas yang akan datang setelah hari acuan)
   const upcomingClasses = schedules
-    .filter((s) => s.day !== todayDayName)
+    .filter((s) => s.class_date && s.class_date > targetTodayStr)
     .sort((a, b) => {
-      const indexA = dayOrder[a.day] || 9
-      const indexB = dayOrder[b.day] || 9
-      if (indexA !== indexB) {
-        return indexA - indexB
-      }
+      const dateA = a.class_date || ''
+      const dateB = b.class_date || ''
+      if (dateA !== dateB) return dateA.localeCompare(dateB)
       return (a.start_time || '').localeCompare(b.start_time || '')
     })
-    .slice(0, 2) // display top 2 upcoming classes
+    .slice(0, 2)
 
-  // 3. Filter classes for selected calendar date
+  // 3. Filter kelas berdasarkan TANGGAL yang diklik di kalender (bukan cuma nama hari)
   const calendarSelectedClasses = schedules
-    .filter((s) => s.day.toLowerCase() === selectedDayName.toLowerCase())
+    .filter((s) => s.class_date === formattedSelectedDateStr)
     .sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''))
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-      {/* ========================================================
-          LEFT PANEL: Kelas Hari Ini Card (65% width equivalent)
-          ======================================================== */}
+      {/* LEFT PANEL: Kelas Hari Ini */}
       <div className="lg:col-span-2 space-y-6">
         <div className="bg-white border border-neutral-200 rounded-lg shadow-sm overflow-hidden flex flex-col justify-between h-full min-h-[480px]">
-          {/* Card Header */}
           <div className="border-b border-neutral-100 px-6 py-4 flex items-center justify-between bg-neutral-50/30">
             <h2 className="text-neutral-900 font-bold text-sm sm:text-base flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-pulse" />
@@ -171,9 +156,7 @@ export default function DashboardMiddleSection({
             </span>
           </div>
 
-          {/* Card Body */}
           <div className="p-6 flex-1 space-y-6">
-            {/* Today List */}
             <div className="space-y-3">
               {todayClasses.length === 0 ? (
                 <div className="py-6 text-center text-neutral-500 flex flex-col items-center justify-center">
@@ -184,13 +167,12 @@ export default function DashboardMiddleSection({
               ) : (
                 <div className="space-y-3">
                   {todayClasses.map((s) => {
-                    const classEndTime = getClassEndTime(s.class_date, s.end_time)
-                    const isPast = classEndTime.getTime() < currentTime.getTime()
+                    const isPast = checkIsPast(s.class_date, s.end_time, currentTimestamp)
 
                     return (
                       <div
                         key={s.id}
-                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between border border-neutral-150 rounded-md p-3.5 bg-neutral-50/20 hover:border-neutral-300 transition-colors gap-3"
+                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between border border-neutral-200 rounded-md p-3.5 bg-neutral-50/20 hover:border-neutral-300 transition-colors gap-3"
                       >
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
@@ -201,6 +183,12 @@ export default function DashboardMiddleSection({
                               <Clock className="w-3 h-3 text-indigo-400" />
                               {formatTime(s.start_time)} - {formatTime(s.end_time)}
                             </span>
+                            {!isPast && (
+                              <span className="flex h-1.5 w-1.5 relative shrink-0">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                              </span>
+                            )}
                           </div>
                           <h4 className={`font-bold text-sm ${isPast ? 'line-through text-neutral-400' : 'text-neutral-900'}`}>
                             {s.courses?.name}
@@ -209,7 +197,7 @@ export default function DashboardMiddleSection({
 
                         <div className="flex items-center gap-3 self-start sm:self-auto text-xs">
                           {isPast ? (
-                            <span className="text-red-600 font-semibold text-xs">Selesai</span>
+                            <span className="text-red-600 font-semibold text-xs bg-red-50 border border-red-100 px-2.5 py-1 rounded">Selesai</span>
                           ) : s.is_online ? (
                             <>
                               <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-100">
@@ -246,7 +234,7 @@ export default function DashboardMiddleSection({
               )}
             </div>
 
-            {/* Divider line */}
+            {/* Upcoming Classes Section */}
             <div className="border-t border-neutral-200 pt-5">
               <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3">
                 Jadwal Berikutnya
@@ -256,8 +244,7 @@ export default function DashboardMiddleSection({
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {upcomingClasses.map((s) => {
-                    const classEndTime = getClassEndTime(s.class_date, s.end_time)
-                    const isPast = classEndTime.getTime() < currentTime.getTime()
+                    const isPast = checkIsPast(s.class_date, s.end_time, currentTimestamp)
 
                     return (
                       <div
@@ -292,7 +279,6 @@ export default function DashboardMiddleSection({
             </div>
           </div>
 
-          {/* Card Footer Link */}
           <div className="p-4 border-t border-neutral-100 bg-neutral-50/20 text-center">
             <Link
               href="/dosen/schedules"
@@ -304,12 +290,9 @@ export default function DashboardMiddleSection({
         </div>
       </div>
 
-      {/* ========================================================
-          RIGHT PANEL: Interactive Calendar Card (35% width equivalent)
-          ======================================================== */}
+      {/* RIGHT PANEL: Kalender */}
       <div className="lg:col-span-1 space-y-6">
         <div className="bg-white border border-neutral-200 rounded-lg shadow-sm p-5 space-y-5">
-          {/* Calendar Controller Header */}
           <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
             <h3 className="font-bold text-neutral-900 text-sm flex items-center gap-1.5">
               <CalendarIcon className="w-4 h-4 text-indigo-600" />
@@ -334,49 +317,42 @@ export default function DashboardMiddleSection({
             </div>
           </div>
 
-          {/* Calendar Grid */}
           <div className="grid grid-cols-7 gap-1 text-center text-xs">
-            {/* Days Header */}
             {['Mi', 'Se', 'Se', 'Ra', 'Ka', 'Ju', 'Sa'].map((d, idx) => (
               <span
                 key={idx}
-                className={`font-semibold py-1 block ${
-                  d === 'Mi' ? 'text-red-500' : 'text-neutral-400'
-                }`}
+                className={`font-semibold py-1 block ${d === 'Mi' ? 'text-red-500' : 'text-neutral-400'
+                  }`}
               >
                 {d}
               </span>
             ))}
 
-            {/* Grid Cells */}
             {calendarDays.map((dayNum, idx) => {
               if (dayNum === null) {
                 return <span key={idx} className="py-2" />
               }
 
-              // Check if selected
               const isSelected =
                 selectedDate.getDate() === dayNum &&
                 selectedDate.getMonth() === currentMonth &&
                 selectedDate.getFullYear() === currentYear
 
-              // Check if today
               const isToday =
-                todayDate.getDate() === dayNum &&
-                todayDate.getMonth() === currentMonth &&
-                todayDate.getFullYear() === currentYear
+                simulatedToday.getDate() === dayNum &&
+                simulatedToday.getMonth() === currentMonth &&
+                simulatedToday.getFullYear() === currentYear
 
               return (
                 <button
                   key={idx}
                   onClick={() => setSelectedDate(new Date(currentYear, currentMonth, dayNum))}
-                  className={`py-1.5 text-center transition-all flex items-center justify-center font-semibold rounded-full mx-auto w-7 h-7 text-xs ${
-                    isSelected
+                  className={`py-1.5 text-center transition-all flex items-center justify-center font-semibold rounded-full mx-auto w-7 h-7 text-xs ${isSelected
                       ? 'bg-indigo-600 text-white font-bold'
                       : isToday
-                      ? 'bg-neutral-100 border border-neutral-300 text-neutral-900 font-bold'
-                      : 'text-neutral-700 hover:bg-neutral-50 cursor-pointer'
-                  }`}
+                        ? 'bg-neutral-100 border border-neutral-300 text-neutral-900 font-bold'
+                        : 'text-neutral-700 hover:bg-neutral-50 cursor-pointer'
+                    }`}
                 >
                   {dayNum}
                 </button>
@@ -384,7 +360,7 @@ export default function DashboardMiddleSection({
             })}
           </div>
 
-          {/* Selected date agenda details */}
+          {/* Selected Date Agenda */}
           <div className="border-t border-neutral-100 pt-4 space-y-3">
             <div className="flex items-center justify-between text-xs font-bold text-neutral-500">
               <span className="uppercase tracking-wider">
@@ -398,12 +374,11 @@ export default function DashboardMiddleSection({
             <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
               {calendarSelectedClasses.length === 0 ? (
                 <p className="text-xs text-neutral-400 py-3 italic text-center">
-                  Tidak ada jadwal mengajar pada hari ini.
+                  Tidak ada jadwal mengajar pada tanggal ini.
                 </p>
               ) : (
                 calendarSelectedClasses.map((s) => {
-                  const classEndTime = getClassEndTime(s.class_date, s.end_time)
-                  const isPast = classEndTime.getTime() < currentTime.getTime()
+                  const isPast = checkIsPast(s.class_date, s.end_time, currentTimestamp)
 
                   return (
                     <div

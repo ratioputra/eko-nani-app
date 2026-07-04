@@ -255,11 +255,10 @@ export default function StudentScheduleClient({
                             return (
                               <div
                                 key={sched.id}
-                                className={`border p-3 rounded-lg transition-all flex flex-col space-y-2.5 group relative overflow-hidden ${
-                                  isPast
+                                className={`border p-3 rounded-lg transition-all flex flex-col space-y-2.5 group relative overflow-hidden ${isPast
                                     ? 'opacity-40 bg-neutral-50/70 border-neutral-200 line-through filter grayscale text-neutral-400'
                                     : 'bg-white border-neutral-150 hover:border-indigo-200 hover:shadow-2xs'
-                                }`}
+                                  }`}
                               >
                                 {/* Active Indicator or Date */}
                                 <div className="flex items-center justify-between gap-2">
@@ -383,11 +382,10 @@ export default function StudentScheduleClient({
                             return (
                               <div
                                 key={sched.id}
-                                className={`border p-3 rounded-lg transition-all flex flex-col space-y-2.5 group relative overflow-hidden ${
-                                  isPast
+                                className={`border p-3 rounded-lg transition-all flex flex-col space-y-2.5 group relative overflow-hidden ${isPast
                                     ? 'opacity-40 bg-neutral-50/70 border-neutral-200 line-through filter grayscale text-neutral-400'
                                     : 'bg-white border-neutral-150 hover:border-indigo-200 hover:shadow-2xs'
-                                }`}
+                                  }`}
                               >
                                 {/* Active Indicator or Date */}
                                 <div className="flex items-center justify-between gap-2">

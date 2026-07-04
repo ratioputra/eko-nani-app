@@ -362,7 +362,7 @@ export default function GradeManager({
             <div>
               <CardTitle className="text-neutral-900 font-semibold text-base flex items-center gap-2">
                 <Table className="w-5 h-5 text-indigo-600" />
-                Excel-Style Grade Grid
+                Nilai Mahasiswa
               </CardTitle>
               <CardDescription className="text-neutral-550 text-sm">
                 Ketik nilai Tugas, UTS, dan UAS langsung pada sel tabel. Nilai Akhir akan dihitung secara langsung (live).

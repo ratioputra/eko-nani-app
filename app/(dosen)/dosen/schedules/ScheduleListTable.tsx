@@ -299,11 +299,10 @@ export default function ScheduleListTable({ initialSchedules, courses }: Schedul
     <div className="bg-white border border-neutral-200 shadow-sm rounded-lg overflow-hidden relative">
       {/* Toast Alert Feedback */}
       {toast && (
-        <div className={`fixed bottom-6 right-6 z-50 p-4 rounded-lg shadow-lg border text-sm flex items-center gap-2 animate-in fade-in slide-in-from-bottom-5 duration-300 ${
-          toast.type === 'success' 
-            ? 'bg-emerald-50 border-emerald-250 text-emerald-850' 
+        <div className={`fixed bottom-6 right-6 z-50 p-4 rounded-lg shadow-lg border text-sm flex items-center gap-2 animate-in fade-in slide-in-from-bottom-5 duration-300 ${toast.type === 'success'
+            ? 'bg-emerald-50 border-emerald-250 text-emerald-850'
             : 'bg-red-50 border-red-250 text-red-850'
-        }`}>
+          }`}>
           {toast.type === 'success' ? (
             <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
           ) : (
@@ -596,14 +595,12 @@ export default function ScheduleListTable({ initialSchedules, courses }: Schedul
                     role="switch"
                     aria-checked={editIsOnline}
                     onClick={() => setEditIsOnline(!editIsOnline)}
-                    className={`${
-                      editIsOnline ? 'bg-indigo-600' : 'bg-neutral-200'
-                    } relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-650`}
+                    className={`${editIsOnline ? 'bg-indigo-600' : 'bg-neutral-200'
+                      } relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-650`}
                   >
                     <span
-                      className={`${
-                        editIsOnline ? 'translate-x-5' : 'translate-x-0'
-                      } pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out`}
+                      className={`${editIsOnline ? 'translate-x-5' : 'translate-x-0'
+                        } pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out`}
                     />
                   </button>
                 </div>
@@ -708,7 +705,7 @@ export default function ScheduleListTable({ initialSchedules, courses }: Schedul
                   {deleteError}
                 </div>
               )}
-              
+
               <div className="text-neutral-600 text-sm leading-relaxed">
                 <p>
                   Apakah Anda yakin ingin menghapus jadwal kuliah untuk mata kuliah <strong className="text-neutral-900 font-bold">{deletingSchedule.courses?.name || 'Mata Kuliah'}</strong> pada hari <strong className="text-neutral-900 font-bold">{formatClassDate(deletingSchedule.class_date, deletingSchedule.day)} ({formatTime(deletingSchedule.start_time)} - {formatTime(deletingSchedule.end_time)})</strong>?

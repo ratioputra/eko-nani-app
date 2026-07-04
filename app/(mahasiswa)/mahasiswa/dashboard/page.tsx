@@ -280,7 +280,7 @@ export default async function MahasiswaDashboardPage() {
             Selamat datang kembali, {profile.name}
           </h1>
           <p className="text-neutral-500 text-sm">
-            NIM: {profile.nim || '-'} • Email: {profile.email} • Pantau jadwal perkuliahan, pengumuman kampus, dan kelola pengerjaan tugas akademik Anda.
+            Pantau jadwal perkuliahan, pengumuman kampus, dan kelola pengerjaan tugas akademik Anda.
           </p>
         </div>
 
